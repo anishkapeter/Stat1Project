@@ -236,13 +236,13 @@ cv.error_Stepwise$delta
 
 
 
-# Examin relationship in Sales price in neighborhood 'NAmes', 'Edwards', 'BrkSide' 
+# Examen relationship in Sales price in neighborhood 'NAmes', 'Edwards', 'BrkSide' 
 ```{r,warning=FALSE, message=FALSE}
 options(scipen = 999)
 
 filtered_neighborhood = data %>% filter (Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
 
-filtered_neighborhood_model= glm(SalePrice ~ GrLivArea, data = filtered_neighborhood)
+filtered_neighborhood_model= lm(SalePrice ~ GrLivArea, data = filtered_neighborhood)
 summary(filtered_neighborhood_model)
 
 residualPlot(filtered_neighborhood_model)
@@ -258,7 +258,7 @@ data3$GrLivArea = log(data$GrLivArea)
 
 filtered_data2 <- data3 %>% filter(Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
 
-filtered_data2_model = glm(SalePrice ~ GrLivArea, data = filtered_data2)
+filtered_data2_model = lm(SalePrice ~ GrLivArea, data = filtered_data2)
 
 histogram(filtered_data2_model$residuals)
 plot(filtered_data2_model)
