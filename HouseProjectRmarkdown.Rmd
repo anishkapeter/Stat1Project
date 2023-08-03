@@ -239,67 +239,77 @@ cv.error_Stepwise$delta
 # Examen relationship in Sales price in neighborhood 'NAmes', 'Edwards', 'BrkSide' 
 ```{r,warning=FALSE, message=FALSE}
 options(scipen = 999)
-
+library(dplyr)
+library(ggplot2)
+data= read.csv("https://raw.githubusercontent.com/anishkapeter/Stat1Project/main/train.csv")
+# Model without Interaction Variable 
 filtered_neighborhood = data %>% filter (Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
 
 filtered_neighborhood_model= lm(SalePrice ~ GrLivArea, data = filtered_neighborhood)
 summary(filtered_neighborhood_model)
 
+# Check Assumptions Model Without Indicator 
 residualPlot(filtered_neighborhood_model)
 histogram(filtered_neighborhood_model$residuals)
-
-
+ggplot(filtered_neighborhood,aes(x =GrLivArea , y =SalePrice )) + 
+  geom_point() +
+  ggtitle("ScatterPlot of SalePrice vs GrLivArea") 
 
 # Residual plot clustered, using log-log method to transform the dataset
 
+# Log log Transform to data 
 data3=data
 data3$SalePrice = log(data$SalePrice)
 data3$GrLivArea = log(data$GrLivArea)
 
+# filter the logged data to only include the 3 neighborhoods of interest
 filtered_data2 <- data3 %>% filter(Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
 
+# build model on log data without interaction 
 filtered_data2_model = lm(SalePrice ~ GrLivArea, data = filtered_data2)
 
-histogram(filtered_data2_model$residuals)
+# Checking Assumptions 
+hist(filtered_data2_model$residuals)
 plot(filtered_data2_model)
+ggplot(filtered_data2,aes(x =GrLivArea , y =SalePrice )) +
+  geom_point()+ggtitle("ScatterPlot of Log(SalePrice) vs Log(GrLivArea)") + 
+  xlab("Log(GrLivArea)") +
+  ylab("Log(SalePrice)")
 
 
-#Observation 337 seems to be very influential, sales price is low for a huge area house, choosing to delete
-
-
-filtered_data2 <- filtered_data2 [ -c(337),]
-
-filtered_data2_model = glm(SalePrice ~ GrLivArea, data = filtered_data2)
-
-histogram(filtered_data2_model$residuals)
-plot(filtered_data2_model)
-summary(filtered_data2_model)
+# Confidence Interval for Log Model without Interaction 
+confint(filtered_data2_model)
 
 plot(filtered_data2$GrLivArea, filtered_data2$SalePrice, 
      main="Scatterplot with Regression Line", 
      xlab="Above grade (ground) living area square feet (GrLivArea)", 
-     ylab="Sale Price (SalePrice)", pch=19, frame=FALSE, col="blue")
+     ylab="Sale Price (SalePrice)", pch=19, frame=FALSE, col="blue")+
+  abline(filtered_data2_model, col="red")
 
-# Add the regression line
-abline(filtered_data2_model, col="red")
+
 ```
 #### Therefore the regression model predicting SalePrice using GrlivArea is 
 SalePrice = 7.58437 + 0.59230 * GrlivArea
 
+# Adding Indicator Variable 
+```{r}
+filtered_data2_model3 <- lm(SalePrice ~  GrLivArea + Neighborhood, data = filtered_data2)
+summary(filtered_data2_model3)
+```
 
-# Adding interation variables
+
+# Adding interaction variables
 ```{r, warning=FALSE, message=FALSE}
 
 # Fit the model
-filtered_data2_model2 <- glm(SalePrice ~  GrLivArea + GrLivArea * Neighborhood, data = filtered_data2)
+filtered_data2_model2 <- lm(SalePrice ~  GrLivArea + GrLivArea * Neighborhood, data = filtered_data2)
 
 # Summary of the model
-model_summary <- summary(filtered_data2_model2)
-model_summary
+summary(filtered_data2_model2)
 
 # Confidence intervals
-model_confint <- confint(filtered_data2_model2)
-model_confint
+confint(filtered_data2_model2)
+
 
 # Residuals histogram
 histogram <- ggplot(filtered_data2_model2, aes(x=residuals)) +
@@ -313,11 +323,21 @@ plot_diag <- plot(filtered_data2_model2, diagnostic = TRUE)
 
 # Model Coefficients
 model_coef <- coef(filtered_data2_model2)
+```
+## Anova Analysis 
+```{r}
+anova(filtered_data2_model3)
+anova(filtered_data2_model2)
+anova(filtered_data2_model)
+1 - pf(68.02972973,2,377)
+
+1 - pf(8.641891892,2,377)
+
 
 ```
 
 
-# Model Summaries
+# Model with Interaction Summaries 
 
 #### For each neighborhood, the regression model predicting SalePrice using GrLivArea is given by:
 
@@ -326,12 +346,14 @@ model_coef <- coef(filtered_data2_model2)
 logSalePrice =  5.91292 + 0.81965*logGrLivArea
 
 ##### Interpretation of the Coefficients 
-For every doubling in the grlivarea, there is an estimated multiplicative increase of 1.76497775436 in the median Sale Price. 
-When the GrLivingArea is 0, the estimated median SalePrice 369.78435.
+Every time the square footage of the living area doubles, there is an estimated multiplicative increase of 1.76497775436 (about 76.5% increase) in the median Sale Price.  
+
+When the square footage of the living area is 0, the estimated median SalePrice 369.78435. 
 
 ##### Interpretation of Confidence Intervals   
-When the GrLivArea is 0 sq.ft., the estimated median Sale Price is between 137.791310802 and 992.375099193 in Brookside neighborhood.
-For every doubling of square footage, the estimated multiplicative increase in median Sales Price for Brookeside is between 1.60159991198 and 1.94501637332. 
+Every time the square footage of the living area doubles, the estimated multiplicative increase in median Sales Price for Brookeside is between 1.60081478829 and 1.94597031156. 
+
+When the square footage of the living area is 0., the estimated median Sale Price is between 137.10639085 and 997.332584908 in Brookside neighborhood.  
 
 
 #### Neighborhood 'NAmes':
@@ -339,25 +361,30 @@ logSalePrice = 7.74784 + 0.47303*logGrLivArea
 
 
 ##### Interpretation of the Coefficients 
-For every doubling in the GrLivArea, there is an estimated multiplicative increase of 1.38802158181 in the median Sale Price. 
-When the GrLivingArea is 0, the estimated median SalePrice 2316.56323.
+Every time the square footage of the living area doubles, there is an estimated multiplicative increase of 1.38802158181, (about 38.8% increase) in the median Sale Price.  
+
+When the square footage of the living area is 0, the estimated median SalePrice 4879.16803655. 
 
 ##### Interpretation of Confidence Intervals   
-When the GrLivArea is 0 sq.ft., the estimated median Sale Price is between 137.791310802 and 992.375099193 in North Ames neighborhood.
-For every doubling of square footage, the estimated multiplicative increase in median Sales Price for North Ames is between 1.12268041109 and 1.7160598979. 
+When the square footage of the living area is 0, the estimated median SalePrice 4879.16803655 . 
+
+When the square footage of the living area is 0, the estimated median Sale Price is between 556.146417272 and 42805.5779923 in North Ames neighborhood. 
+ 
 
 
 #### Neighborhood 'Edwards':
-logSalePrice = 8.49273 + 0.55639 *logGrLivArea
+logSalePrice = 8.00651 + 0.51967 *logGrLivArea
 
 ##### Interpretation of the Coefficients 
-For every doubling in the grlivarea, there is an estimated multiplicative increase of 1.47058482203 in the median Sale Price. 
-When the GrLivingArea is 0, the estimated median SalePrice 4879.16804.
+Every time the square footage of the living area doubles, there is an estimated multiplicative increase of 1.4336074105 (about 43.36% increase) in the median Sale Price.  
+
+When the square footage of the living area is 0, the estimated median Sale Price 3000.42732748.  
 
 ##### Confidence Intervals and Interpretation 
 
-When the GrLivArea is 0 sq.ft., the estimated median Sale Price is between 233.902158067 and 22943.202173 for houses in the Edwards Neighborhood.
-For every doubling of square footage, the estimated multiplicative increase in median Sales Price for Edwards Neighborhood is between 1.1742930628 and 1.84164270122.
+When the square footage of the living area is 0, the estimated median Sale Price is between 312.416333335 and 28815.756004 for houses in the Edwards Neighborhood. 
+
+Every time the square footage of the living area doubles, the estimated multiplicative increase in median Sales Price for Edwards Neighborhood is between 1.14827731299 and 1.78988066094. 
 
 
 
