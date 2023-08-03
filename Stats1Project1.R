@@ -10,7 +10,7 @@ library(caret)
 
 
 # 1. Data exploration
-train=read.csv('train (2).csv')
+train=read.csv('https://raw.githubusercontent.com/anishkapeter/Stat1Project/main/train.csv')
 
 
 # 2. Looking at how many NAs are there in each columns
@@ -135,3 +135,162 @@ Step_model = ols_step_both_p(model)
 
 
 train2= read.csv(file = 'processed_data_nominal.csv')
+
+
+
+# Examen relationship in Sales price in neighborhood 'NAmes', 'Edwards', 'BrkSide' 
+
+options(scipen = 999)
+
+filtered_neighborhood = data %>% filter (Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
+
+filtered_neighborhood_model= glm(SalePrice ~ GrLivArea, data = filtered_neighborhood)
+summary(filtered_neighborhood_model)
+residualPlot(filtered_neighborhood_model)
+histogram(filtered_neighborhood_model$residuals)
+
+
+
+# Residual plot clustered, using log-log method to transform the dataset
+
+data3=data
+data3$SalePrice = log(data$SalePrice)
+data3$GrLivArea = log(data$GrLivArea)
+
+filtered_data2 <- data3 %>% filter(Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
+
+filtered_data2_model = glm(SalePrice ~ GrLivArea, data = filtered_data2)
+
+histogram(filtered_data2_model$residuals)
+plot(filtered_data2_model)
+
+
+#Observation 337 seems to be very influential, sales price is low for a huge area house, choosing to delete
+
+
+filtered_data2 <- filtered_data2 [ -c(337),]
+
+filtered_data2_model = glm(SalePrice ~ GrLivArea, data = filtered_data2)
+
+histogram(filtered_data2_model$residuals)
+plot(filtered_data2_model)
+summary(filtered_data2_model)
+
+plot(filtered_data2$GrLivArea, filtered_data2$SalePrice, 
+     main="Scatterplot with Regression Line", 
+     xlab="Above grade (ground) living area square feet (GrLivArea)", 
+     ylab="Sale Price (SalePrice)", pch=19, frame=FALSE, col="blue")
+
+# Add the regression line
+abline(filtered_data2_model, col="red")
+```
+#### Therefore the regression model predicting SalePrice using GrlivArea is 
+logSalePrice = 7.58437 + 0.59230 * logGrlivArea
+
+
+# Adding Interaation Variables
+
+# Fit the model
+filtered_data2_model2 <- glm(SalePrice ~  GrLivArea + GrLivArea * Neighborhood, data = filtered_data2)
+
+# Summary of the model
+model_summary <- summary(filtered_data2_model2)
+model_summary
+
+# Confidence intervals
+model_confint <- confint(filtered_data2_model2)
+model_confint
+
+# Residuals histogram
+histogram <- ggplot(filtered_data2_model2, aes(x=residuals)) +
+  geom_histogram(binwidth=1, color="black", fill="white") +
+  theme_minimal() +
+  labs(x="Residuals", y="Frequency", title="Histogram of Residuals")
+
+# Model diagnostics
+plot_diag <- plot(filtered_data2_model2, diagnostic = TRUE)
+
+
+# Model Coefficients
+model_coef <- coef(filtered_data2_model2)
+
+
+# Model Summaries
+
+#### For each neighborhood, the regression model predicting SalePrice using GrLivArea is given by:
+
+#### Neighborhood 'BrkSide':
+
+logSalePrice =  5.91292 + 0.81965*logGrLivArea
+
+##### Interpretation of the Coefficients 
+For every doubling in the grlivarea, there is an estimated multiplicative increase of 1.76497775436 in the median Sale Price. 
+When the GrLivingArea is 0, the estimated median SalePrice 369.78435.
+
+##### Interpretation of Confidence Intervals   
+When the GrLivArea is 0 sq.ft., the estimated median Sale Price is between 137.791310802 and 992.375099193 in Brookside neighborhood.
+For every doubling of square footage, the estimated multiplicative increase in median Sales Price for Brookeside is between 1.60159991198 and 1.94501637332. 
+
+
+#### Neighborhood 'NAmes':
+logSalePrice = 7.74784 + 0.47303*logGrLivArea
+
+
+##### Interpretation of the Coefficients 
+For every doubling in the GrLivArea, there is an estimated multiplicative increase of 1.38802158181 in the median Sale Price. 
+When the GrLivingArea is 0, the estimated median SalePrice 2316.56323.
+
+##### Interpretation of Confidence Intervals   
+When the GrLivArea is 0 sq.ft., the estimated median Sale Price is between 137.791310802 and 992.375099193 in North Ames neighborhood.
+For every doubling of square footage, the estimated multiplicative increase in median Sales Price for North Ames is between 1.12268041109 and 1.7160598979. 
+
+
+#### Neighborhood 'Edwards':
+SalesPrice = `r round(model_coef[5],5)` + `r round(model_coef[6],5)` * GrLivArea
+
+logSalePrice = 8.49273 + 0.55639 *logGrLivArea
+
+##### Interpretation of the Coefficients 
+For every doubling in the grlivarea, there is an estimated multiplicative increase of 1.47058482203 in the median Sale Price. 
+When the GrLivingArea is 0, the estimated median SalePrice 4879.16804.
+
+##### Confidence Intervals and Interpretation 
+
+When the GrLivArea is 0 sq.ft., the estimated median Sale Price is between 233.902158067 and 22943.202173 for houses in the Edwards Neighborhood.
+For every doubling of square footage, the estimated multiplicative increase in median Sales Price for Edwards Neighborhood is between 1.1742930628 and 1.84164270122.
+
+
+
+
+
+
+filtered_data2
+library(ggplot2)
+filtered_neighborhood %>% 
+  filter(Neighborhood == "BrkSide") %>% 
+  ggplot(aes(x=GrLivArea, y = SalePrice)) + 
+  geom_point( color = "steelblue") + 
+  ggtitle("Sale Price vs Living Area Sq.Ft in Brookside") +
+  xlab("Square Footage of Living Area") +
+  ylab("Sales Price in Dollars")
+
+
+filtered_neighborhood %>% 
+  filter(Neighborhood == "Edwards") %>% 
+  ggplot(aes(x=GrLivArea, y = SalePrice)) + 
+  geom_point( color = "steelblue") + 
+  ggtitle("Sale Price vs Living Area Sq.Ft in Edwards") +
+  xlab("Square Footage of Living Area") +
+  ylab("Sales Price in Dollars")
+
+filtered_neighborhood %>% 
+  filter(Neighborhood == "NAmes") %>% 
+  ggplot(aes(x=GrLivArea, y = SalePrice)) + 
+  geom_point(color = "steelblue") + 
+  ggtitle("Sale Price vs Living Area Sq.Ft in North Ames") +
+  xlab("Square Footage of Living Area") +
+  ylab("Sales Price in Dollars")
+
+
+
+
