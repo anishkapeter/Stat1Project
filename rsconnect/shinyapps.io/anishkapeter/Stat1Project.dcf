@@ -1,0 +1,12 @@
+name: Stat1Project
+title: Stat1Project
+username: anishkapeter
+account: anishkapeter
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9551990
+bundleId:
+url: https://anishkapeter.shinyapps.io/Stat1Project/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

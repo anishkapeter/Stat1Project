@@ -17,15 +17,8 @@ header <- dashboardHeader(title = "Housing Price Prediction")
 
 sidebar <- dashboardSidebar(width = 250,
                             conditionalPanel(
-                              condition = "input.tabselected == '1'",
-                              selectInput("model", "Select a model",
-                                          choices = c("Forward Selection","Backward Selection","Side-Step Selection","Custom")),
-                              
-                            ),
-                            
-                            conditionalPanel(
                               condition = "input.tabselected == '2'",
-                              selectInput('select', 'Browse Different Neighborhood', choices = c( "BrkSide","Edwards","NAmes")),
+                              selectInput('select', 'Browse Different Neighborhood', choices = c( "Brookside","Edwards","North Ames")),
                               
                             ))
 
@@ -34,11 +27,10 @@ body <- dashboardBody(
   mainPanel(
     tabsetPanel(
       id = "tabselected", # Add ID here
-      tabPanel("Question1", value = "1", h4("Exploring different models"), plotOutput("wordcloud")),
-      tabPanel("Question2", value = "2",
+      tabPanel("Analysis 1", value = "2",
                conditionalPanel(
-                 condition = "input.select == 'BrkSide'",
-                 h4("BrkSide"), 
+                 condition = "input.select == 'Brookside'",
+                 h4("Brookside"), 
                  plotOutput("BrkSidePlot")
                ),
                conditionalPanel(
@@ -47,8 +39,8 @@ body <- dashboardBody(
                  plotOutput("EdwardsPlot")
                ),
                conditionalPanel(
-                 condition = "input.select == 'NAmes'",
-                 h4("NAmes"), 
+                 condition = "input.select == 'North Ames'",
+                 h4("North Ames"), 
                  plotOutput("NAmesPlot")
                )
       )
