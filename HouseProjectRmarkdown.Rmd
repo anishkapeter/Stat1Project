@@ -26,6 +26,7 @@ library(ggpubr)
 data=read.csv('https://raw.githubusercontent.com/anishkapeter/Stat1Project/main/train.csv')
 
 ```
+
 # Fill missing values in numeric columns with KNN imputation
 ```{r,warning=FALSE, message=FALSE}
 numeric_cols <- names(data)[sapply(data, is.numeric)]
@@ -241,16 +242,20 @@ cv.error_Stepwise$delta
 options(scipen = 999)
 library(dplyr)
 library(ggplot2)
+
 data= read.csv("https://raw.githubusercontent.com/anishkapeter/Stat1Project/main/train.csv")
+
 # Model without Interaction Variable 
 filtered_neighborhood = data %>% filter (Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
 
 filtered_neighborhood_model= lm(SalePrice ~ GrLivArea, data = filtered_neighborhood)
 summary(filtered_neighborhood_model)
 
-# Check Assumptions Model Without Indicator 
-residualPlot(filtered_neighborhood_model)
+# Check Assumptions Model Without Indicator and Interaction Variable  
+plot(filtered_neighborhood_model)
+
 histogram(filtered_neighborhood_model$residuals)
+
 ggplot(filtered_neighborhood,aes(x =GrLivArea , y =SalePrice )) + 
   geom_point() +
   ggtitle("ScatterPlot of SalePrice vs GrLivArea") 
@@ -265,19 +270,22 @@ data3$GrLivArea = log(data$GrLivArea)
 # filter the logged data to only include the 3 neighborhoods of interest
 filtered_data2 <- data3 %>% filter(Neighborhood %in% c('NAmes', 'Edwards', 'BrkSide'))
 
-# build model on log data without interaction 
+# build model on log data without interaction and indicator var
 filtered_data2_model = lm(SalePrice ~ GrLivArea, data = filtered_data2)
+summary(filtered_data2_model)
 
 # Checking Assumptions 
-hist(filtered_data2_model$residuals)
-plot(filtered_data2_model)
 ggplot(filtered_data2,aes(x =GrLivArea , y =SalePrice )) +
   geom_point()+ggtitle("ScatterPlot of Log(SalePrice) vs Log(GrLivArea)") + 
   xlab("Log(GrLivArea)") +
   ylab("Log(SalePrice)")
 
+hist(filtered_data2_model$residuals)
 
-# Confidence Interval for Log Model without Interaction 
+plot(filtered_data2_model)
+
+
+# Confidence Interval for Log Model without Interaction or Indicator
 confint(filtered_data2_model)
 
 plot(filtered_data2$GrLivArea, filtered_data2$SalePrice, 
@@ -293,8 +301,10 @@ SalePrice = 7.58437 + 0.59230 * GrlivArea
 
 # Adding Indicator Variable 
 ```{r}
+# Adding Indicator Variable 
 filtered_data2_model3 <- lm(SalePrice ~  GrLivArea + Neighborhood, data = filtered_data2)
 summary(filtered_data2_model3)
+
 ```
 
 
@@ -324,11 +334,18 @@ plot_diag <- plot(filtered_data2_model2, diagnostic = TRUE)
 # Model Coefficients
 model_coef <- coef(filtered_data2_model2)
 ```
+
 ## Anova Analysis 
 ```{r}
+#ANOVA for model with Neighborhood as Interaction Variable 
 anova(filtered_data2_model3)
+
+#ANOVA for model with Neighborhood as Indicator Variable 
 anova(filtered_data2_model2)
+
+#ANOVA for model without Neighborhood  
 anova(filtered_data2_model)
+
 1 - pf(68.02972973,2,377)
 
 1 - pf(8.641891892,2,377)
