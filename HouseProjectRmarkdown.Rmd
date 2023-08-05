@@ -20,13 +20,18 @@ library(multiUS)
 library(boot)
 library(ggplot2)
 library(ggpubr)
+library(readr)
+library(corrplot)
+library(olsrr)
+library(MASS)
+library(car)
+
 
 #Load Data
 
 data=read.csv('https://raw.githubusercontent.com/anishkapeter/Stat1Project/main/train.csv')
 
 ```
-
 # Fill missing values in numeric columns with KNN imputation
 ```{r,warning=FALSE, message=FALSE}
 numeric_cols <- names(data)[sapply(data, is.numeric)]
@@ -42,18 +47,112 @@ data[numeric_cols] <- numeric_data_imputed
 
 ```
 
-# Define ordinal columns and apply factor encoding
+
+# combine training and test data together, for easier cleaning
+
+```{r}
+url <- "https://github.com/anishkapeter/Stat1Project/blob/main/test.csv?raw=true"
+test <- read.csv(url)
+
+data_c <- subset(data, select = -c(SalePrice))
+saleprice = data$SalePrice
+# Combine the data and test dataframes
+combined_data <- rbind(data_c, test)
+
+
+
+```
+
+# Define ordinal columns, regroup character columns and apply factor encoding.
 ```{r,warning=FALSE, message=FALSE}
+# Identify character columns
+
+
+
+combined_data$ExterCond <- factor(combined_data$ExterCond, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$ExterCond <- as.numeric(combined_data$ExterCond)
+combined_data$ExterQual <- factor(combined_data$ExterQual, levels = c("Fa", "TA", "Gd", "Ex"))
+combined_data$ExterQual <- as.numeric(combined_data$ExterQual)
+
+
+# First, ensure NA values are not treated as missing data
+combined_data$BsmtQual <- addNA(combined_data$BsmtQual)
+combined_data$BsmtCond <- addNA(combined_data$BsmtCond)
+combined_data$BsmtQual <- factor(combined_data$BsmtQual, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$BsmtCond <- factor(combined_data$BsmtCond, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$BsmtQual <- as.numeric(combined_data$BsmtQual)
+combined_data$BsmtCond <- as.numeric(combined_data$BsmtCond)
+
+
+
+# First, ensure NA values are not treated as missing data
+combined_data$GarageCond <- addNA(combined_data$GarageCond)
+combined_data$GarageQual <- addNA(combined_data$GarageQual)
+combined_data$GarageCond <- factor(combined_data$GarageCond, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$GarageQual <- factor(combined_data$GarageQual, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$GarageCond <- as.numeric(combined_data$GarageCond)
+combined_data$GarageQual <- as.numeric(combined_data$GarageQual)
+
+
+
+# Convert NA values to factor levels
+combined_data$PoolQC <- addNA(combined_data$PoolQC)
+combined_data$FireplaceQu <- addNA(combined_data$FireplaceQu)
+combined_data$HeatingQC <- addNA(combined_data$HeatingQC)
+combined_data$KitchenQual <- addNA(combined_data$KitchenQual)
+combined_data$BsmtExposure <- addNA(combined_data$BsmtExposure)
+combined_data$PoolQC <- factor(combined_data$PoolQC, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$FireplaceQu <- factor(combined_data$FireplaceQu, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$HeatingQC <- factor(combined_data$HeatingQC, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$KitchenQual <- factor(combined_data$KitchenQual, levels = c("Po", "Fa", "TA", "Gd", "Ex"))
+combined_data$BsmtExposure <- factor(combined_data$BsmtExposure, levels = c("No", "Mn", "Av", "Gd"))
+combined_data$PoolQC <- as.numeric(combined_data$PoolQC)
+combined_data$FireplaceQu <- as.numeric(combined_data$FireplaceQu)
+combined_data$HeatingQC <- as.numeric(combined_data$HeatingQC)
+combined_data$KitchenQual <- as.numeric(combined_data$KitchenQual)
+combined_data$BsmtExposure <- as.numeric(combined_data$BsmtExposure)
+
+
+
+# Convert NA values to factor levels
+combined_data$BsmtFinType1 <- addNA(combined_data$BsmtFinType1)
+combined_data$BsmtFinType2 <- addNA(combined_data$BsmtFinType2)
+combined_data$Fence <- addNA(combined_data$Fence)
+combined_data$GarageFinish <- addNA(combined_data$GarageFinish)
+combined_data$Alley <- addNA(combined_data$Alley)
+
+#table(combined_data$Alley)
+
+combined_data$BsmtFinType1 <- factor(combined_data$BsmtFinType1, levels = c("Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ"))
+combined_data$BsmtFinType2 <- factor(combined_data$BsmtFinType2, levels = c("Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ"))
+combined_data$CentralAir <- factor(combined_data$CentralAir, levels = c("N", "Y"))
+combined_data$Fence <- factor(combined_data$Fence, levels = c("MnWw", "GdWo", "MnPrv", "GdPrv"))
+combined_data$GarageFinish <- factor(combined_data$GarageFinish, levels = c("Unf", "RFn", "Fin"))
+combined_data$Alley <- factor(combined_data$Alley, levels = c("Grvl", "Pave"))
+combined_data$LotShape <- factor(combined_data$LotShape, levels = c("Reg", "IR1", "IR2", "IR3"))
+combined_data$LandSlope <- factor(combined_data$LandSlope, levels = c("Gtl", "Mod", "Sev"))
+
+combined_data$BsmtFinType1 <- as.numeric(combined_data$BsmtFinType1)
+combined_data$BsmtFinType2 <- as.numeric(combined_data$BsmtFinType2)
+combined_data$CentralAir <- as.numeric(combined_data$CentralAir)
+combined_data$Fence <- as.numeric(combined_data$Fence)
+combined_data$GarageFinish <- as.numeric(combined_data$GarageFinish)
+combined_data$Alley <- as.numeric(combined_data$Alley)
+combined_data$LotShape <- as.numeric(combined_data$LotShape)
+combined_data$LandSlope <- as.numeric(combined_data$LandSlope)
+
+
+
+
 ordinal_cols <- c('ExterQual', 'ExterCond', 'BsmtQual', 'BsmtCond', 
                   'GarageCond', 'GarageQual', 'PoolQC', 'FireplaceQu', 
                   'HeatingQC', 'KitchenQual', 'BsmtExposure', 'BsmtFinType1', 
-                  'BsmtFinType2', 'CentralAir', 'Fence','GarageFinish','Alley','LotShape','LandSlope')
+                'BsmtFinType2', 'CentralAir', 'Fence','GarageFinish','Alley','LotShape','LandSlope')
+
+#table(data$ExterQual)
 
 
-
-data[ordinal_cols] <- lapply(data[ordinal_cols], function(x) as.numeric(as.factor(x)))
-
-data[ordinal_cols] <- lapply(data[ordinal_cols], function(x) replace(x, is.na(x), 0))
+combined_data[ordinal_cols] <- lapply(combined_data[ordinal_cols], function(x) replace(x, is.na(x), 0))
 
 
 
@@ -68,8 +167,9 @@ data[ordinal_cols] <- lapply(data[ordinal_cols], function(x) replace(x, is.na(x)
 #  return(x)
 # })
 
-# Convert all character columns to factors and add NA as a level
-colnames(data)[sapply(data, is.character)]
+# Checking all character columns
+#colnames(data)[colSums(is.na(data)) > 0]
+
 
 
 
@@ -77,39 +177,47 @@ colnames(data)[sapply(data, is.character)]
 n <- 10 
 
 # Loop through the character columns
-for (col_name in colnames(data)[sapply(data, is.character)]) {
+for (col_name in colnames(combined_data)[sapply(combined_data, is.character)]) {
   # Convert rare observations to 'Other'
-  data[[col_name]] <- ifelse(data[[col_name]] %in% names(which(table(data[[col_name]]) < n)), "Other", data[[col_name]])
+  combined_data[[col_name]] <- ifelse(combined_data[[col_name]] %in% names(which(table(combined_data[[col_name]]) < n)), "Other", combined_data[[col_name]])
   
   # Convert column to factor
-  data[[col_name]] <- as.factor(data[[col_name]])
+  combined_data[[col_name]] <- as.factor(combined_data[[col_name]])
 
   # Add NA as a level if there are any NAs in the column
-  if(any(is.na(data[[col_name]]))) {
-    data[[col_name]] <- addNA(data[[col_name]])
+  if(any(is.na(combined_data[[col_name]]))) {
+    combined_data[[col_name]] <- addNA(combined_data[[col_name]])
     
   
   }
 }
 
 #Deleting some columns
-rare_level_factors <- sapply(data2, function(x) is.factor(x) && any(table(x) <= 2))
-print(names(data2)[rare_level_factors])
+#rare_level_factors <- sapply(data2, function(x) is.factor(x) && any(table(x) <= 2))
+#print(names(data2)[rare_level_factors])
 
 
-data$Electrical=as.character(data$Electrical)
-data$Electrical[is.na(data$Electrical)] <- "Other"
-data$Electrical=as.factor(data$Electrical)
-table(data$Electrical)
+#data$Electrical=as.character(data$Electrical)
+#data$Electrical[is.na(data$Electrical)] <- "Other"
+#data$Electrical=as.factor(data$Electrical)
+#class(combined_data$Electrical)
 
-data <- data[,-which(names(data) == "Utilities")]
+
+
+#data <- data[,-which(names(data) == "Utilities")]
 
 
 # No more missing values, ordinary variable has been factorized
 
-sum(is.na(data))
-#class(data$MiscFeature)
+sum(is.na(combined_data))
+#table(data$MiscFeature)
+#table(data$Street)
 #table(data$Utilities)
+#table(data$Condition2)
+#table(data$MiscFeature)
+#table(data$Electrical)
+
+
 
 
 
@@ -117,9 +225,66 @@ sum(is.na(data))
 ```
 
 
+
+
+
+# Checking Colinearity of the model
+
+```{r}
+
+#Deleting "TotalBsmtSF or X1stFlrSF" , "GarageCars or GarageArea" , "YearBuilt or GarageYearBuilt" , "Fireplaces" or "FireplacesQu" , "GarageCond" or GarageQu",  "PoolQC or PoolArea"
+
+df_numeric <- combined_data[sapply(combined_data, is.numeric)]
+
+# Compute the correlation matrix
+cor_matrix <- cor(df_numeric, use = "pairwise.complete.obs")
+
+# Create a correlation plot
+corrplot(cor_matrix, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45, tl.cex = 0.5)
+
+
+# Find pairs with high correlation
+high_corr_indices <- findCorrelation(cor_matrix, cutoff = 0.7)
+
+# Get column names from indices
+high_corr_names <- colnames(df_numeric)[high_corr_indices]
+
+# Print the column names
+print(high_corr_names)
+```
+Deleting "TotalBsmtSF or X1stFlrSF" , "GarageCars or GarageArea" , "YearBuilt or GarageYearBuilt" , "Fireplaces" or "FireplacesQu" , "GarageCond" or GarageQual" "PoolQC or PoolArea", "BsmtFinSF1 or BsmtFinType1"， “BsmtFinSF2 or BsmtFinType2" 
+
+# Checking for redundency/ deleting noise in the data
+
+Rare Observation provide very little information about the dependent variable and may cause noise in the data set.
+
+```{r}
+table(combined_data$Street)
+table(combined_data$Utilities)
+table(combined_data$Condition2)
+table(combined_data$MiscFeature)
+
+combined_data <- combined_data[, -which(names(combined_data) %in% c('X1stFlrSF', 'GarageCars', 'GarageYrBlt','FireplaceQu','GarageCond','PoolQC','BsmtFinType1','BsmtFinType2' ,'Street', 'Utilities', 'Condition2', 'MiscFeature', 'Alley','Fence'))]
+
+
+#write.csv(data2,file = 'data2')
+#formula(model2)
+#colnames(data2[sapply(data2,is.numeric)])
+table(combined_data$Foundation)
+```
+
+
 # Checking assumption for regression (full model)
 
 ```{r,warning=FALSE, message=FALSE}
+data=combined_data[1:1460,]
+data$SalePrice=saleprice
+test = combined_data[1461:nrow(combined_data), ]
+
+
+
+
 model = lm(SalePrice ~., data = data)
 
 
@@ -131,20 +296,22 @@ plot(model)
 
 #Look for influential observations
 
-#Looking at observation 1171,1424, delete them in the data
-data= data[-c(1171,1424),]
+#Looking at observation 1299,524, delete them in the data
+data= data[-c(1299,524),]
+rownames(data) <- NULL
+#write.csv(data,file = "train123")
+#colnames(data[sapply(combined_data, is.factor)])
 ```
 
 
-
-
-# Loggin SalePrice to see if it fix the clusterred residuals
+# Logging SalePrice to see if it fix the clusterred residuals
 ```{r,warning=FALSE, message=FALSE}
 data2=data
 data2$SalePrice = log(data$SalePrice)
-model2 = glm(SalePrice~., data = data2)
+model2 = lm(SalePrice~., data = data2)
+summary(model2)
 residualPlot(model2)
-
+#write.csv(data2,file="logdata.csv",row.names = FALSE)
 
 # Compare to model1(unlogged) , the residual plots forms a rather perfect random cloud formation which is ideal
 # Histogram
@@ -156,21 +323,80 @@ plot(model2)
 
 
 
+
+
 # Perform a forward/backward/stepwise selection based on AIC 
 
 ```{r,results='hide',warning=FALSE, message=FALSE}
-null_model <- glm(SalePrice ~ 1, data = data2)
-forward_model <- step(null_model, 
-                      scope = list(lower = null_model, upper = model2), 
-                      direction = "forward")
+
+
+#Forward Selection based on AIC
+model2 = lm(SalePrice~., data = data2)
+f = ols_step_forward_aic(model2,details = TRUE)
+
+plot(f, print_plot = TRUE)
+
+
+# train the model 
+model_f <- lm(
+SalePrice ~ OverallQual + Neighborhood + GrLivArea + BsmtFinType1 + 
+    GarageArea + OverallCond + YearBuilt + MSZoning + FireplaceQu + 
+    BsmtExposure + MSSubClass + Exterior1st + Condition1 + Functional + 
+    BsmtFullBath + LandContour + SaleCondition + Heating + ScreenPorch + 
+    KitchenQual + WoodDeckSF + TotRmsAbvGrd + HeatingQC + LotConfig + 
+    FullBath + CentralAir + BldgType + GarageQual + SaleType + 
+    PoolQC + PoolArea + EnclosedPorch + YearRemodAdd + ExterCond + 
+    X2ndFlrSF + HalfBath + Foundation + LotArea + BsmtQual + 
+    KitchenAbvGr + LotShape + X3SsnPorch + RoofMatl, data = data2)
+summary(model_f)
+plot(model_f)
+
+#table(data2$Neighborhood)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Perform backward selection based on AIC
-backward_model <- step(model2, 
-                       direction = "backward")
+
+b <- stepAIC(model2, direction = "backward") 
+summary(b) 
+train_control<- trainControl(method="LOOCV")
+formula(b)
+
+# train the model 
+model_b <- lm(
+  formula(b),
+  data = data2_copy)
+summary(model_b)
+plot(model_b)
 
 
 # Perform stepwise selection
-stepwise_model <- step(model2, direction = "both")
+s <- ols_step_both_aic(model2,details = TRUE)
+
+
+model_s <- lm (SalePrice ~ OverallQual + Neighborhood + GrLivArea + BsmtFinType1 + GarageArea + OverallCond + YearBuilt + MSZoning + FireplaceQu + BsmtExposure + MSSubClass + Exterior1st + Condition1 + Functional + BsmtFullBath + LandContour + SaleCondition + Heating + ScreenPorch + KitchenQual + WoodDeckSF + TotRmsAbvGrd + HeatingQC + LotConfig + FullBath + CentralAir + BldgType + GarageQual + SaleType + PoolQC + PoolArea + EnclosedPorch + YearRemodAdd + ExterCond + X2ndFlrSF + HalfBath + Foundation + LotArea + BsmtQual + KitchenAbvGr + LotShape + X3SsnPorch + RoofMatl,
+  data = data2)
+plot(model_s)
+summary(model_s)
+
+
+
+
+
 ```
 
 
@@ -178,52 +404,70 @@ stepwise_model <- step(model2, direction = "both")
 # Calculating CV Press 
 ```{r,warning=FALSE, message=FALSE}
 
-
-
-
-
-
-
-cv_errors <- numeric(nrow(data2))
-
-for(i in 1:nrow(data2)) {
-  model_loocv <- glm(formula(forward_model), 
-    data = data2[-i, ])
-  predicted <- predict(model_loocv, newdata = data2[i, ])
-  cv_errors[i] <- sum((predicted - data2$SalePrice[i])^2)
-}
-cv_error <- mean(cv_errors, na.rm = TRUE)
-
-
-
-
-
 # Forward CV Press
-forward <- glm(formula(forward_model), data = data2)
 
 
-cv.error_foward <- cv.glm(data2, forward, K = 10)
+data2$HeatingQC[data2$HeatingQC == "Other"] <- "Ex"
+data2$HeatingQC <- droplevels(data2$HeatingQC)
 
-cv.error_foward$delta
+
+
+
+press_f = 0
+
+for (i in 1:nrow(data2)){
+  model_loocv_f = lm(
+SalePrice ~ OverallQual + Neighborhood + GrLivArea + BsmtFinType1 + 
+    GarageArea + OverallCond + YearBuilt + MSZoning + FireplaceQu + 
+    BsmtExposure + MSSubClass + Exterior1st + Condition1 + Functional + 
+    BsmtFullBath + LandContour + SaleCondition + Heating + ScreenPorch + 
+    KitchenQual + WoodDeckSF + TotRmsAbvGrd + HeatingQC + LotConfig + 
+    FullBath + CentralAir + BldgType + GarageQual + SaleType + 
+    PoolQC + PoolArea + EnclosedPorch + YearRemodAdd + ExterCond + 
+    X2ndFlrSF + HalfBath + Foundation + LotArea + BsmtQual + 
+    KitchenAbvGr + LotShape + X3SsnPorch + RoofMatl,
+  data = data2[-i,] )
+  
+  predition_f = predict(model_loocv_f,newdata=data2[i,])
+  
+  press_f = press_f + (data2$SalePrice[i]-predition_f)^2
+  
+}
+
+print(press_f)
+
 
 
 
 # Backward CV Press
-Backward <- glm(formula(backward_model), data = data2)
+press_b = 0
 
+for (i in 1:nrow(data2)){
+  model_loocv_b = lm(formula(b),
+  data = data2[-i,] )
+  
+  predition_b = predict(model_loocv_b,newdata=data2[i,])
+  
+  press_b = press_b + (data2$SalePrice[i]-predition_b)^2
+  
+}
 
-cv.error_Backward <- cv.glm(data2, Backward, K = 10)
-
-cv.error_Backward$delta
-
+print(press_b)
 
 # Stepwise CV Press
-Stepwise <- glm(formula(stepwise_model), data = data2)
+press_s = 0
 
+for (i in 1:nrow(data2)){
+  model_loocv_s = lm(SalePrice ~ OverallQual + Neighborhood + GrLivArea + BsmtFinType1 + GarageArea + OverallCond + YearBuilt + MSZoning + FireplaceQu + BsmtExposure + MSSubClass + Exterior1st + Condition1 + Functional + BsmtFullBath + LandContour + SaleCondition + Heating + ScreenPorch + KitchenQual + WoodDeckSF + TotRmsAbvGrd + HeatingQC + LotConfig + FullBath + CentralAir + BldgType + GarageQual + SaleType + PoolQC + PoolArea + EnclosedPorch + YearRemodAdd + ExterCond + X2ndFlrSF + HalfBath + Foundation + LotArea + BsmtQual + KitchenAbvGr + LotShape + X3SsnPorch + RoofMatl,
+  data = data2[-i,] )
+  
+  predition_s = predict(model_loocv_s,newdata=data2[i,])
+  
+  press_s = press_s + (data2$SalePrice[i]-predition_s)^2
+  
+}
 
-cv.error_Stepwise<- cv.glm(data2, Stepwise, K = 10)
-
-cv.error_Stepwise$delta
+print(press_s)
 
 
 
@@ -233,6 +477,176 @@ cv.error_Stepwise$delta
 
 # Build custom regression model
 
+```{r}
+#Using VIF
+
+model_c <- lm (SalePrice ~ OverallQual + Neighborhood + GrLivArea + BsmtFinType1 + GarageArea + OverallCond + YearBuilt + MSZoning + FireplaceQu + BsmtExposure + MSSubClass + Exterior1st + Condition1 + Functional + BsmtFullBath + LandContour + SaleCondition + Heating + ScreenPorch + KitchenQual + WoodDeckSF + TotRmsAbvGrd + HeatingQC + LotConfig + FullBath + CentralAir + BldgType + GarageQual + SaleType  + PoolArea + EnclosedPorch + YearRemodAdd + ExterCond + X2ndFlrSF + HalfBath + Foundation + LotArea  + KitchenAbvGr + LotShape + X3SsnPorch + RoofMatl,
+  data = data2)
+
+vif(model_c)
+#- BsmtQual PoolQC
+
+
+#To build our custom model, we use the strategy to clean out extra columns using P value, inuition and common sense.
+# we will start out with out with our step wise model
+
+
+press_c = 0
+
+for (i in 1:nrow(data2)){
+  model_loocv_c = lm(SalePrice ~ OverallQual + Neighborhood + GrLivArea + BsmtFinType1 + GarageArea + OverallCond + YearBuilt + MSZoning + FireplaceQu + BsmtExposure + MSSubClass + Exterior1st + Condition1 + Functional + BsmtFullBath + LandContour + SaleCondition + Heating + ScreenPorch + KitchenQual + WoodDeckSF + TotRmsAbvGrd + HeatingQC + LotConfig + FullBath + CentralAir + BldgType + GarageQual + SaleType  + PoolArea + EnclosedPorch + YearRemodAdd + ExterCond + X2ndFlrSF + HalfBath + Foundation + LotArea  + KitchenAbvGr + LotShape + X3SsnPorch + RoofMatl,
+  data = data2[-i,] )
+  
+  predition_c = predict(model_loocv_c,newdata=data2[i,])
+  
+  press_c = press_c + (data3$SalePrice[i]-predition_c)^2
+  
+}
+
+print(press_c)
+
+
+```
+# Predition
+```{r}
+
+table(data$MSZoning)
+table(test$MSZoning)
+levels(test$MSZoning)[is.na(levels(test$MSZoning))] <- "RL"
+
+
+table(data$Exterior1st )
+table(test$Exterior1st )
+levels(test$Exterior1st)[is.na(levels(test$Exterior1st))] <- "VinylSd"
+
+table(data$Functional  )
+table(test$Functional  )
+levels(test$Functional )[is.na(levels(test$Functional ))] <- "Typ"
+
+table(data$SaleType   )
+table(test$SaleType   )
+levels(test$SaleType  )[is.na(levels(test$SaleType  ))] <- "WD"
+#Forward
+
+lm_predict_model= lm(SalePrice ~ MSSubClass + LotArea + OverallQual + OverallCond + YearBuilt + MasVnrArea + ExterQual +
+               BsmtQual + BsmtCond + BsmtExposure + BsmtFinSF1 + TotalBsmtSF + GrLivArea + HalfBath +
+               BedroomAbvGr + KitchenAbvGr + KitchenQual + GarageArea + GarageQual + WoodDeckSF +
+               ScreenPorch + MoSold + MSZoning + LotConfig + Neighborhood + Condition1 + BldgType +
+               Exterior1st + MasVnrType + Foundation + Functional + GarageType + PavedDrive + SaleCondition,
+               data = data2)
+summary(lm_predict_model)
+
+ 
+ 
+prediciton=predict(lm_predict_model,newdata = test)
+
+
+test$SalePrice=exp(prediciton)
+Submission_F=test[,c("Id","SalePrice")]
+
+mean_sale_price <- mean(Submission_F$SalePrice, na.rm = TRUE)
+Submission_F$SalePrice[is.na(Submission_F$SalePrice)] <- mean_sale_price
+
+sum(is.na(prediciton))
+write.csv(Submission_F, file = 'Submission_F.csv', row.names = FALSE)
+
+
+
+plot(lm_predict_model$residuals)
+qqPlot(lm_predict_model)
+histogram(lm_predict_model$residuals)
+plot(lm_predict_model)
+
+
+
+
+#Backward
+
+model_formula <- lm( SalePrice ~ MSSubClass + LotFrontage + LotArea + LandSlope + OverallQual + OverallCond + YearBuilt + MasVnrArea + ExterQual + ExterCond + BsmtQual + BsmtCond + BsmtExposure + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + HeatingQC + X2ndFlrSF + LowQualFinSF + GrLivArea + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + TotRmsAbvGrd + Fireplaces + GarageArea + GarageQual + WoodDeckSF + OpenPorchSF + X3SsnPorch + ScreenPorch + PoolArea + MoSold + MSZoning + LandContour + LotConfig + Neighborhood + Condition1 + BldgType + HouseStyle + RoofMatl + Exterior1st + MasVnrType + Foundation + Functional + GarageType + SaleType + SaleCondition
+,data = data2)
+summary(model_formula)
+prediciton=predict(model_formula,newdata = test)
+
+test$SalePrice=exp(prediciton)
+submission_Backward=test[,c("Id","SalePrice")]
+
+mean_sale_price <- mean(submission_Backward$SalePrice, na.rm = TRUE)
+submission_Backward$SalePrice[is.na(submission_Backward$SalePrice)] <- mean_sale_price
+
+sum(is.na(prediciton))
+write.csv(submission_Backward, file = 'submission_Backward.csv', row.names = FALSE)
+
+
+plot(model_formula$residuals)
+qqPlot(model_formula)
+histogram(model_formula$residuals)
+plot(model_formula)
+
+#stepwise
+
+model_formula <- lm(SalePrice ~ MSSubClass + LotFrontage + LotArea + LandSlope + OverallQual + OverallCond + YearBuilt + MasVnrArea + ExterQual + ExterCond + BsmtQual + BsmtCond + BsmtExposure + BsmtFinSF1 + BsmtFinSF2 + TotalBsmtSF + GrLivArea + BedroomAbvGr + KitchenAbvGr + KitchenQual + GarageArea + GarageQual + WoodDeckSF + OpenPorchSF + MoSold + MSZoning + LotConfig + Neighborhood + Condition1 + BldgType + Exterior1st + MasVnrType + Functional + GarageType + PavedDrive + SaleCondition,data = data2)
+summary(model_formula)
+
+prediciton=predict(model_formula,newdata = test)
+
+test$SalePrice=exp(prediciton)
+submission_stepwise=test[,c("Id","SalePrice")]
+
+mean_sale_price <- mean(submission_stepwise$SalePrice, na.rm = TRUE)
+submission_stepwise$SalePrice[is.na(submission_stepwise$SalePrice)] <- mean_sale_price
+
+sum(is.na(prediciton))
+write.csv(submission_stepwise, file = 'submission_stepwise.csv', row.names = FALSE)
+
+plot(model_formula$residuals)
+qqPlot(model_formula)
+histogram(model_formula$residuals)
+plot(model_formula)
+#Custom
+
+
+
+model_formula= lm(SalePrice ~ MSZoning:GrLivArea+ LotArea:BsmtFinSF1+KitchenAbvGr:GarageQual +GrLivArea:LotArea+ LotArea + OverallQual + OverallCond + YearBuilt  + BsmtExposure + BsmtFinSF1 +BsmtFinSF2 +HeatingQC+BsmtUnfSF + GrLivArea + HalfBath + KitchenAbvGr + KitchenQual + GarageArea + GarageQual + WoodDeckSF +
+               ScreenPorch  + MSZoning  + Neighborhood  + BldgType +
+               MasVnrType + Foundation + Functional + GarageType  + SaleCondition+Fireplaces,
+               data = data2)           
+summary(model_formula)
+ 
+prediciton=predict(model_formula,newdata = test)  
+
+test$SalePrice=exp(prediciton)
+submission_Cust=test[,c("Id","SalePrice")]
+
+mean_sale_price <- mean(submission_Cust$SalePrice, na.rm = TRUE)
+submission_Cust$SalePrice[is.na(submission_Cust$SalePrice)] <- mean_sale_price
+
+sum(is.na(prediciton))
+write.csv(submission_Cust, file = 'submission_Cust.csv', row.names = FALSE)
+
+
+
+
+#trial2
+
+model_formula= lm(SalePrice ~ (YearBuilt:ScreenPorch+LotArea:TotalBsmtSF+KitchenAbvGr:GarageQual +GrLivArea:LotArea+ LotArea + OverallQual + OverallCond + YearBuilt  + BsmtExposure + BsmtFinSF1 +BsmtFinSF2 +HeatingQC+BsmtUnfSF + GrLivArea + HalfBath + KitchenAbvGr + KitchenQual + GarageArea + GarageQual + WoodDeckSF +
+               ScreenPorch  + MSZoning  + Neighborhood  + BldgType +
+               MasVnrType + Foundation + Functional + GarageType  + SaleCondition+Fireplaces)^2,
+               data = data2)  
+summary(model_formula)
+
+prediciton=predict(model_formula,newdata = test)  
+
+test$SalePrice=exp(prediciton)
+submission_Cust=test[,c("Id","SalePrice")]
+
+mean_sale_price <- mean(submission_Cust$SalePrice, na.rm = TRUE)
+submission_Cust$SalePrice[is.na(submission_Cust$SalePrice)] <- mean_sale_price
+
+sum(is.na(prediciton))
+write.csv(submission_Cust, file = 'submission_Cust.csv', row.names = FALSE)
+
+
+```
 
 
 
@@ -434,7 +848,6 @@ filtered_neighborhood %>%
   ggtitle("Sale Price vs Living Area Sq.Ft in North Ames") +
   xlab("Square Footage of Living Area") +
   ylab("Sales Price in Dollars")
-
 
 
 
